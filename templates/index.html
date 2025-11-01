@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta tags for character encoding and responsive viewport -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Askify</title>
+    
+    <!-- External CSS and Font Imports -->
+    <script src="https://cdn.tailwindcss.com"></script> <!-- TailwindCSS for utility-first styling -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> <!-- Inter font family -->
+    
+    <!-- Custom CSS Styles -->
+    <style>
+        /* Base font family for entire application */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Hover effect for paste button */
+        .paste-btn:hover {
+            background-color: #F3F4F6;
+        }
+        
+        /* Upload zone transitions and hover effects */
+        .upload-zone {
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .upload-zone.drag-over {
+            border-color: #f97316; /* Orange border when dragging over */
+            background-color: #fff7ed; /* Light orange background */
+        }
+        
+        /* Sidebar transitions for mobile responsiveness */
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        
+        /* Mobile-specific sidebar styles */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%); /* Hidden off-screen by default */
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 50;
+                overflow-y: auto;
+            }
+            .sidebar.open {
+                transform: translateX(0); /* Slide in when open */
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+            }
+            .sidebar-overlay.open {
+                display: block; /* Show overlay when sidebar is open */
+            }
+        }
+        
+        /* Profile dropdown styling */
+        .profile-dropdown {
+            display: none; /* Hidden by default */
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            width: 200px;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            z-index: 50;
+        }
+        .profile-dropdown.open {
+            display: block; /* Show when active */
+        }
+        
+        /* Custom focus styles for authentication inputs */
+        .auth-input:focus {
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); /* Orange focus ring */
+        }
+        
+        /* Authentication tab styling */
+        .auth-tab.active {
+            background-color: white;
+            color: #f97316; /* Active tab orange color */
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        .auth-tab:not(.active) {
+            background-color: transparent;
+            color: #6b7280; /* Inactive tab gray color */
+        }
+        
+        /* Quiz celebration screen styles */
+        .celebration-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .celebration-container.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .celebration-card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .celebration-container.show .celebration-card {
+            transform: scale(1);
+        }
+        
+        .celebration-badge {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background: #f97316;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(249, 115, 22, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .celebration-badge::before {
+            content: '';
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 2px dashed #f97316;
+            animation: spin 10s linear infinite;
+            z-index: -1;
+        }
+        
+        .celebration-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #f97316;
+            margin-bottom: 10px;
+        }
+        
+        .celebration-score {
+            font-size: 72px;
+            font-weight: 800;
+            color: #f97316;
+            margin: 10px 0;
+            line-height: 1;
+        }
+        
+        .celebration-message {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .celebration-quote {
+            font-style: italic;
+            color: #6b7280;
+            margin: 25px 0;
+            padding: 15px;
+            border-left: 4px solid #f97316;
+            background: #fff7ed;
+            border-radius: 8px;
+            text-align: left;
+        }
+        
+        .celebration-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .celebration-btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .celebration-btn-primary {
+            background: #f97316;
+            color: white;
+            border: none;
+        }
+        
+        .celebration-btn-primary:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(249, 115, 22, 0.3);
+        }
+        
+        .celebration-btn-secondary {
+            background: white;
+            color: #f97316;
+            border: 2px solid #f97316;
+        }
+        
+        .celebration-btn-secondary:hover {
+            background: #fff7ed;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f97316;
+            border-radius: 50%;
+            opacity: 0;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Answer explanation styles */
+        .explanation-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            background: #fff7ed;
+            border-left: 4px solid #f97316;
+        }
+        
+        .explanation-title {
+            font-weight: 600;
+            color: #f97316;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .explanation-content {
+            color: #000;
+            line-height: 1.5;
+        }
+        
+        /* Quiz History Styles with Color Scheme */
+        .history-item {
+            background: white;
+            border: 2px solid #f97316;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .history-item:hover {
+            background: #fff7ed;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+        }
+        
+        .history-item-incomplete {
+            border-style: dashed;
+            background: #fff7ed;
+        }
+        
+        .history-title {
+            font-weight: 600;
+            color: #000;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        
+        .history-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .history-date {
+            color: #666;
+        }
+        
+        .history-score {
+            font-weight: 700;
+            color: #f97316;
+        }
+        
+        .history-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        
+        .status-complete {
+            color: #f97316;
+        }
+        
+        .status-incomplete {
+            color: #f97316;
+        }
+        
+        .history-icon {
+            font-size: 16px;
+        }
+        
+        .empty-history {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-history-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #f97316;
+        }
+        
+        .sidebar-header {
+            color: #f97316;
+            border-bottom: 2px solid #f97316;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen">
+    <!-- Header Section with Logo and Navigation -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <!-- Logo Section -->
+            <div class="flex items-center">
+                <img 
+                    src="/static/img/askify.jpg" 
+                    alt="Askify Logo" 
+                    class="h-14 object-contain"
+                />
+            </div>
+            
+            <!-- Mobile Menu Button (Hidden on desktop) -->
+            <button id="mobileMenuBtn" class="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            
+            <!-- Authentication and User Controls -->
+            <div class="flex items-center space-x-4">
+                <!-- Guest Controls (Visible when user is not logged in) -->
+                <div id="guestControls" class="flex items-center space-x-3">
+                    <button id="loginBtn" class="px-6 py-2 rounded-lg text-orange-500 font-semibold hover:bg-orange-50 transition-colors border border-orange-200">
+                        Login
+                    </button>
+                    <button id="signupBtn" class="px-6 py-2 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600 transition-colors shadow-sm">
+                        Sign Up
+                    </button>
+                </div>
+                
+                <!-- User Controls (Visible when user is logged in) -->
+                <div id="userControls" class="hidden flex items-center space-x-4">
+                    <div class="relative">
+                        <!-- Profile Button with Avatar and Dropdown -->
+                        <button id="profileBtn" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                            <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm" id="userAvatar">
+                                JD <!-- User initials placeholder -->
+                            </div>
+                            <div class="text-left hidden lg:block">
+                                <div class="text-sm font-semibold text-gray-900" id="userName">John Doe</div>
+                                <div class="text-xs text-gray-500" id="userEmail">john@example.com</div>
+                            </div>
+                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- Profile Dropdown Menu -->
+                        <div id="profileDropdown" class="profile-dropdown">
+                            <div class="p-4 border-b border-gray-100">
+                                <div class="text-sm font-semibold text-gray-900" id="dropdownUserName">John Doe</div>
+                                <div class="text-xs text-gray-500 truncate" id="dropdownUserEmail">john@example.com</div>
+                            </div>
+                            <div class="p-2">
+                                <button id="dropdownLogout" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center space-x-2">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                    </svg>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Quiz Celebration Screen -->
+    <div id="celebrationScreen" class="celebration-container">
+        <div class="celebration-card">
+            <div class="celebration-badge" id="celebrationBadge">
+                <span id="celebrationScore">0</span>
+            </div>
+            <h1 class="celebration-title">Quiz Complete!</h1>
+            <div class="celebration-message" id="celebrationMessage">Great job on completing the quiz!</div>
+            <div class="celebration-quote" id="celebrationQuote">
+                "Success is not final, failure is not fatal: It is the courage to continue that counts." - Winston Churchill
+            </div>
+            <div class="celebration-actions">
+                <button id="celebrationReviewBtn" class="celebration-btn celebration-btn-secondary">Review Answers</button>
+                <button id="celebrationNewQuizBtn" class="celebration-btn celebration-btn-primary">New Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Modal (Hidden by default) -->
+    <div id="authModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50" style="display:none;">
+        <div class="bg-white rounded-2xl p-8 shadow-xl w-full max-w-md mx-4">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-900" id="authModalTitle">Welcome Back</h2>
+                <p class="text-gray-500 mt-2" id="authModalSubtitle">Sign in to your account to continue</p>
+            </div>
+            
+            <!-- Login/Signup Tab Selector -->
+            <div class="flex mb-6 bg-gray-100 rounded-lg p-1">
+                <button id="showLogin" class="auth-tab active flex-1 py-3 text-center font-semibold rounded-md transition-colors">
+                    Login
+                </button>
+                <button id="showSignup" class="auth-tab flex-1 py-3 text-center font-semibold rounded-md transition-colors">
+                    Sign Up
+                </button>
+            </div>
+            
+            <!-- Authentication Form -->
+            <form id="authForm" class="space-y-4">
+                <!-- Name Field (Only visible during signup) -->
+                <div id="nameField" class="hidden">
+                    <label for="authName" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="authName" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg auth-input focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors" 
+                        placeholder="Enter your full name" 
+                    />
+                </div>
+                
+                <!-- Email Field -->
+                <div>
+                    <label for="authEmail" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="authEmail" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg auth-input focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors" 
+                        placeholder="Enter your email" 
+                        required 
+                    />
+                </div>
+                
+                <!-- Password Field -->
+                <div>
+                    <label for="authPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input 
+                        type="password" 
+                        id="authPassword" 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg auth-input focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors" 
+                        placeholder="Enter your password" 
+                        required 
+                    />
+                </div>
+                
+                <!-- Error Display Area -->
+                <div id="authError" class="text-center text-red-600 text-sm bg-red-50 py-2 rounded-lg hidden"></div>
+                
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-sm flex items-center justify-center space-x-2"
+                >
+                    <span id="authSubmitText">Sign In</span>
+                    <svg id="authSpinner" class="w-5 h-5 text-white animate-spin hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v4m0 12v4m8-10h-4M6 12H2m15.364-7.364l-2.828 2.828M7.464 17.536l-2.828 2.828m0-12.728l2.828 2.828m9.9 9.9l2.828 2.828"></path>
+                    </svg>
+                </button>
+                
+                <!-- Cancel Button -->
+                <div class="text-center">
+                    <button type="button" id="authCancel" class="text-gray-500 hover:text-gray-700 text-sm font-medium mt-4">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content Layout with Sidebar -->
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row">
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        
+        <!-- Quiz History Sidebar -->
+        <div id="sidebar" class="sidebar w-full md:w-80 bg-white border-r border-gray-200 md:min-h-screen p-4 md:p-6">
+            <div class="flex justify-between items-center mb-4 sidebar-header">
+                <h3 class="text-xl font-bold text-black">Quiz History</h3>
+                <!-- Close Button for Mobile -->
+                <button id="closeSidebar" class="md:hidden p-1 rounded-md text-gray-500 hover:bg-gray-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <!-- Container for Quiz History Items -->
+            <div id="quizHistoryList" class="space-y-3 max-h-[calc(100vh-180px)] overflow-y-auto"></div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 py-10 px-4 sm:px-6 lg:px-8">
+            <div class="mb-12">
+                <!-- Hero Section -->
+                <div class="text-center mb-12">
+                    <h1 class="text-3xl font-bold text-orange-500 mb-4">Create Custom Quizzes with AI</h1>
+                    <p class="text-center text-gray-500 text-sm px-4">AI Quiz Maker from PDF, Word documents, and text files. Perfect for STEM students, teachers, and self-learners.</p>
+                </div>
+
+                <!-- Quiz Creation Interface -->
+                <div class="space-y-6">
+                    <!-- File Upload Zone -->
+                    <div id="uploadZone" class="upload-zone bg-white border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer">
+                        <div class="flex flex-col items-center">
+                            <svg class="w-16 h-16 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p class="text-gray-700 mb-1">
+                                <span>Upload </span>
+                                <span class="text-orange-500 font-medium">PDF</span>
+                                <span> or </span>
+                                <span class="text-orange-500 font-medium">Document</span>
+                                <span> to create quiz</span>
+                            </p>
+                            <p class="text-gray-400 text-sm">Supports PDF, Word (DOCX), and TXT files</p>
+                            <!-- Hidden file input for upload functionality -->
+                            <input type="file" id="fileInput" class="hidden" accept=".pdf,.docx,.txt">
+                        </div>
+                    </div>
+
+                    <!-- Topic Input Section -->
+                    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <div class="flex gap-3">
+                            <textarea 
+                                id="topicInput" 
+                                placeholder="e.g., Create a quiz about Marketing fundamentals"
+                                class="flex-1 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                                rows="3"
+                            ></textarea>
+                            <!-- Paste from Clipboard Button -->
+                            <button 
+                                id="pasteBtn"
+                                class="paste-btn bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-600 text-sm font-medium h-fit shadow-sm transition-colors"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                    <span>Paste Question</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quiz Configuration Options -->
+                    <div class="flex flex-wrap gap-4 items-end">
+                        <!-- Difficulty Selector -->
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">Difficulty:</label>
+                            <select id="difficulty" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="Easy">Easy</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Hard">Hard</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Question Count Selector -->
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">Questions:</label>
+                            <select id="questionCount" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Quiz Type Selector -->
+                        <div class="flex-1 min-w-[180px]">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">Types:</label>
+                            <select id="quizType" class="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="Multiple Choice" selected>Multiple Choice</option>
+                                <option value="True/False">True/False</option>
+                                <option value="Short Answer">Short Answer</option>
+                                <option value="Mixed">Mixed</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Generate Quiz Button -->
+                        <button 
+                            id="generateBtn"
+                            class="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <span>Generate Quiz</span>
+                        </button>
+                    </div>
+
+                    <!-- Loading Spinner (Hidden by default) -->
+                    <div id="loadingSpinner" class="hidden text-center py-8">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
+                        <p class="text-gray-600 mt-4">Generating your quiz...</p>
+                    </div>
+
+                    <!-- Results Section (Hidden until quiz is generated) -->
+                    <div id="resultsSection" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-2xl font-bold text-gray-900">Your Quiz</h2>
+                            <!-- Quiz Action Buttons -->
+                            <div class="flex gap-2">
+                                <button 
+                                    id="copyBtn"
+                                    class="bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 text-sm font-medium shadow-sm hover:bg-gray-50 transition-colors"
+                                >
+                                    Copy Quiz
+                                </button>
+                                <button 
+                                    id="downloadBtn"
+                                    class="bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-700 text-sm font-medium shadow-sm hover:bg-gray-50 transition-colors"
+                                >
+                                    Download
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Container for Generated Quiz Questions -->
+                        <div id="quizContainer" class="space-y-6"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="w-full text-center py-4 text-gray-500 text-sm bg-white border-t mt-8">Powered by Askify 2025</footer>
+
+    <!-- Main JavaScript File -->
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
